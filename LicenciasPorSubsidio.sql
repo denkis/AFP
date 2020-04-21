@@ -42,20 +42,22 @@ from DDS.tb_planilla_moviper
 where (fec_desde is not NULL or fec_ini_labores is not null);
 
 
-SELECT case when fec_desde is not null then fec_desde else fec_ini_labores end fechaInicioLicencia ,
+SELECT distinct case when fec_desde is not null then fec_desde else fec_ini_labores end fechaInicioLicencia ,
 case when fec_hasta is not null then fec_hasta else fec_fin_labores end fechaFinLicencia ,
 tpm.id_det_planilla,datediff(day,fechainicioLicencia,fechafinLicencia)+1 diastotales,
-tmp.PER_COT,tpc.MONTO,tpc.ID_TIP_CONCEPTO 
+tmp.PER_COT,case when isnull(tp1.MONTO,0) > 0 then round((tp1.MONTO/diastotales),0) else tp2.MONTO end valorDiario into dchavez.detalleLicencias
 FROM DDS.tb_planilla_moviper tpm
 INNER JOIN DDS.TB_DET_PLANILLA tdp ON tpm.ID_DET_PLANILLA  = tdp.ID_DET_PLANILLA 
 inner join DDS.TB_MAE_PLANILLA  tmp on tmp.ID_MAE_PLANILLA = tdp.ID_MAE_PLANILLA  --per_cot, tipo planilla pago subsidio
 INNER JOIN DDS.TB_MAE_PERSONA   tme on tme.ID_MAE_PERSONA  = tdp.ID_MAE_PERSONA 
-inner join DDS.TB_DET_PLANILLA_CONCEPTO tpc on tpc.ID_DET_PLANILLA = tdp.ID_DET_PLANILLA 
+left outer JOIN DDS.TB_DET_PLANILLA_CONCEPTO tp1 on tp1.ID_DET_PLANILLA = tdp.ID_DET_PLANILLA and tp1.ID_TIP_CONCEPTO in (101)
+left outer JOIN DDS.TB_DET_PLANILLA_CONCEPTO tp2 on tp2.ID_DET_PLANILLA = tdp.ID_DET_PLANILLA and tp2.ID_TIP_CONCEPTO in (112)
 WHERE tmp.ID_TIP_PLANILLA  = 7
 and (tpm.fec_desde is not NULL or tpm.fec_ini_labores is not null)
-and rut_mae_persona = 123263;
+and fechaInicioLicencia < fechaFinLicencia;
+--and rut_mae_persona = 123263;
 
- select * from dds.TB_DET_PLANILLA_CONCEPTO
+ 
  
 
 commit;

@@ -1,0 +1,1221 @@
+ALTER PROCEDURE "dchavez"."cargarFctEmpleadorRelacionAfiliadoReproceso"(in fechaProceso date , OUT codigoError VARCHAR(10))
+BEGIN
+     /*-----------------------------------------------------------------------------------------
+    - Nombre archivo                            : DMGestion.cargarFctEmpleadorRelacionAfiliado.sql
+    - Nombre del módulo                         : Modelo de Empleador Relación Afiliado
+    - Fecha de  creación                        : 02-07-2013
+    - Nombre del autor                          : Maximiliano Díaz C. - CGI
+    - Descripción corta del módulo              : Procedimiento que carga la tabla de hechos de Empleador Relación Afiliado
+    - Lista de procedimientos contenidos        : 
+    - Documentos asociados a la creación        : 
+    - Fecha de modificación                     : 
+    - Nombre de la persona que lo modificó      : 
+    - Cambios realizados                        : 
+    - Documentos asociados a la modificación    : 
+    -------------------------------------------------------------------------------------------*/
+
+    -------------------------------------------------------------------------------------------
+    --Declaración de Variables
+    -------------------------------------------------------------------------------------------
+    -- Variable para capturar el codigo de error
+    DECLARE lstCodigoError                      VARCHAR(10);    --variable local de tipo varchar
+    -- Variables Locales
+    DECLARE linIdPeriodoInformar                INTEGER;        --variable local de tipo integer
+    -- Variables auditoria
+    DECLARE ldtFechaPeriodoInformado            DATETIME;       --variable local de tipo datetime
+    DECLARE ldtUltimaFechaMesInformar           DATETIME;       --variable local de tipo datetime
+    DECLARE ldtPeriodoCotizacion                DATETIME;       --variable local de tipo datetime
+    DECLARE ldtPeriodoCotizacionAdelantado      DATETIME;       --variable local de tipo datetime
+    DECLARE ldtFechaInicioCarga                 DATETIME;       --variable local de tipo datetime
+    DECLARE lbiCantidadRegistrosInformados      BIGINT;         --variable local de tipo bigint
+    -- Constantes 
+    DECLARE cstNombreProcedimiento              VARCHAR(150);   --constante de tipo varchar
+    DECLARE cstNombreTablaFct                   VARCHAR(150);   --constante de tipo varchar
+    DECLARE ctiCodigoSinClasificar              TINYINT;        --constante de tipo tinyint
+    DECLARE cstCodigoErrorCero                  VARCHAR(10);    --constante de tipo varchar
+    DECLARE cstClaveMaximaFechaVigencia         VARCHAR(100);   --constante de tipo varchar
+    DECLARE cdtMaximaFechaVigencia              DATE;           --constante de tipo date
+    DECLARE cchCodigoSinClasificar              CHAR(1);        --constante de tipo char
+    DECLARE ctiCodTipoProdCCICO                 TINYINT;        --constante de tipo tinyint
+    DECLARE cbiCodSubGrupoCCICO1                BIGINT;         --constante de tipo bigint
+    DECLARE cbiCodSubGrupoCCICO2                BIGINT;         --constante de tipo bigint
+    DECLARE ctiCodTipoProdCAV                   BIGINT;         --constante de tipo bigint
+    DECLARE cbiCodSubGrupoCAV1                  BIGINT;         --constante de tipo bigint
+    DECLARE ctiCodTipoProdAPVCCICV              TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodTipoProdAPVCCIDC              TINYINT;        --constante de tipo tinyint
+    DECLARE cbiCodSubGrupoAPV1                  BIGINT;         --constante de tipo bigint
+    DECLARE cbiCodSubGrupoAPV2                  BIGINT;         --constante de tipo bigint 
+    DECLARE cchCodTipoPlanillaSubsidio          CHAR(1);        --constante de tipo char
+    DECLARE ctiCodEmpPrincipal                  TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodEmpSecundario                 TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodEmpHistorico                  TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodEstadoContractual1            TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodEstadoContractual2            TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodEmplInvalido                  TINYINT;        --constante de tipo tinyint
+    DECLARE cchCodOrigenDeudaDNP                CHAR(2);        --constante de tipo char
+    DECLARE cchCodOrigenDeudaDNPA               CHAR(2);        --constante de tipo char
+    DECLARE ctiCodCliente                       TINYINT;        --constante de tipo tinyint
+    DECLARE ctiCodDeudaIngresada                TINYINT;        --constante de tipo tinyint 
+    DECLARE ctiEmpUnicoAfiliado                 TINYINT;        --constante de tipo tinyint   
+    DECLARE cinUno                              TINYINT;        --constante de tipo tinyint;                 
+
+    -------------------------------------------------------------------------------------------
+    --Seteo Variable auditoria
+    -------------------------------------------------------------------------------------------
+    --se obtiene la fecha y hora de carga
+    SET ldtFechaInicioCarga = getDate();
+   
+    -------------------------------------------------------------------------------------------
+    --Seteo de Constantes
+    -------------------------------------------------------------------------------------------
+    SET cstNombreProcedimiento = 'cargarFctEmpleadorRelacionAfiliado';
+    SET cstNombreTablaFct = 'FctEmpleadorRelacionAfiliado';
+    SET ctiCodigoSinClasificar = 0;
+    SET ctiCodTipoProdCCICO = 1;
+    SET cbiCodSubGrupoCCICO1 = 1101;
+    SET cbiCodSubGrupoCCICO2 = 1105;
+    SET ctiCodTipoProdCAV = 2;
+    SET cbiCodSubGrupoCAV1 = 1101;
+    SET ctiCodTipoProdAPVCCICV = 4;
+    SET ctiCodTipoProdAPVCCIDC = 5;
+    SET cbiCodSubGrupoAPV1 = 1101;
+    SET cbiCodSubGrupoAPV2 = 1111;
+    SET cchCodTipoPlanillaSubsidio = 'S';
+    SET ctiCodEmpPrincipal = 1;
+    SET ctiCodEmpSecundario = 2;
+    SET ctiCodEmpHistorico = 3;
+    SET ctiCodEstadoContractual1 = 1;
+    SET ctiCodEstadoContractual2 = 2;
+    SET ctiCodEmplInvalido = 0;
+    SET cchCodOrigenDeudaDNP = '01';
+    SET cchCodOrigenDeudaDNPA = '07';
+    SET ctiCodCliente = 4;
+    SET ctiCodDeudaIngresada = 1;
+    SET ctiEmpUnicoAfiliado = 1;
+    SET cstCodigoErrorCero = '0';
+    SET cchCodigoSinClasificar = '0';
+    SET cstClaveMaximaFechaVigencia = 'MAXIMA_FECHA_VIGENCIA';
+    SET cinUno              = 1;
+
+    --Se obtiene el parametro MAXIMA_FECHA_VIGENCIA de la tabla Parametros
+    SELECT CONVERT(DATE, DMGestion.obtenerParametro(cstClaveMaximaFechaVigencia), 103) 
+    INTO cdtMaximaFechaVigencia
+    FROM DUMMY;
+
+    -------------------------------------------------------------------------------------------
+    --Seteo de Variables
+    -------------------------------------------------------------------------------------------    
+    --Se obtiene el identificador del periodo a informar
+    SELECT DMGestion.obtenerIdDimPeriodoInformarPorFecha(fechaProceso)
+    INTO linIdPeriodoInformar 
+    FROM DUMMY;
+    
+    --se obtiene la fecha del periodo a informar
+    SET ldtFechaPeriodoInformado = fechaProceso;
+        
+    -- Se obtiene el último día del periodo a informar
+    SELECT DMGestion.obtenerUltimaFechaMes(ldtFechaPeriodoInformado) 
+    INTO ldtUltimaFechaMesInformar
+    FROM DUMMY;
+
+    -- Se obtiene la fecha del periodo de cotización
+    
+    SELECT CONVERT(DATE, DATEADD(mm, -cinUno, ldtFechaPeriodoInformado)) 
+    INTO ldtPeriodoCotizacion
+    FROM DUMMY;
+
+    -- Se obtiene el periodo de cotización adelantado
+    SET ldtPeriodoCotizacionAdelantado = ldtFechaPeriodoInformado;
+
+    -------------------------------------------------------------------------------------------
+    --Cuerpo
+    -------------------------------------------------------------------------------------------
+    --Elimina los errores de carga y datos de la fact para el periodo a informar
+    --CALL dchavez.eliminarFact(cstNombreProcedimiento, cstNombreTablaFct, linIdPeriodoInformar, codigoError);
+    --set codigoError=0;
+    
+    IF (cstCodigoErrorCero = 0) THEN
+        -------------------------------------------------------------------------------------------
+        --Obtención de Información
+        -------------------------------------------------------------------------------------------
+        -- A.1 - Afiliados por cotizaciones en el mes
+        -- Movimientos Cuenta CCICO
+
+
+message 'CCICO' to client;
+            SELECT 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            dpe.rut                                 rutPersona,
+            dpa.rut                                 rutPagador,
+            a.idMaePlanilla                         planilla,
+            CONVERT(BIGINT, null)                   codigoActividadEconomica,
+            CONVERT(CHAR(1),null)                   indSubsidio,
+            SUM( a.montoPesos )                     montoPesos
+            case when
+        INTO #movimientosCuentaCCICO
+        FROM dchavez.FctMovimientosCuentaCodAct a
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.idPersona = dpe.id )
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.idPagador = dpa.id )
+            INNER JOIN DMGestion.DimTipoProducto b ON ( a.idTipoProducto = b.id ) 
+            INNER JOIN DMGestion.DimGrupoMovimiento c ON ( a.idGrupoMovimiento = c.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND a.idPagador > ctiCodEmplInvalido
+        --AND a.periodoDevengRemuneracion IN ( ldtPeriodoCotizacion, ldtPeriodoCotizacionAdelantado ) 
+        AND b.codigo = ctiCodTipoProdCCICO -- CCICO
+        AND c.codigoSubgrupo IN ( cbiCodSubGrupoCCICO1, cbiCodSubGrupoCCICO2 )
+        GROUP BY 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            a.idMaePlanilla;
+            
+        SELECT A.rutPersona,a.rutPagador,tca.COD_ACT_ECONOMICA into #codAct
+        FROM #movimientosCuentaCCICO a
+        INNER JOIN DDS.TB_PERSONA_PLANILLA ppl ON (ppl.ID_MAE_PLANILLA = a.Planilla and ind_tipo = 0)
+        INNER JOIN DDS.TB_COD_ACT_ECONOMICA tca ON (tca.ID_COD_ACT_ECONOMICA = ppl.ID_COD_ACT_ECONOMICA);
+        
+        --Agrega el código de actividad económico    
+        UPDATE #movimientosCuentaCCICO
+        SET codigoActividadEconomica = isnull(b.COD_ACT_ECONOMICA,0)
+        FROM #movimientosCuentaCCICO a
+        INNER JOIN #codAct b on b.rutPersona = a.rutPersona AND a.rutpagador = b.rutPagador;
+                    
+message 'subsidio' to client;
+
+        -- Se obtienen los empleadores y afiliados con licencias médicas
+        SELECT DISTINCT
+            mccico.idPeriodoInformado,
+            mccico.rutPersona,
+            mccico.rutPagador,
+            mccico.periodoDevengRemuneracion
+        INTO #relacionAfiliadoSubsidios
+        FROM DMGestion.FctRecaudacion a
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.idPersona = dpe.id )
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.idPagador = dpa.id )
+            INNER JOIN DMGestion.DimTipoProducto dtip ON ( a.idTipoProducto = dtip.id )    
+            INNER JOIN DMGestion.DimTipoPlanilla dtp ON ( a.idTipoPlanilla = dtp.id ) 
+            INNER JOIN #movimientosCuentaCCICO mccico ON ( dpe.rut = mccico.rutPersona
+                                                 AND dpa.rut = mccico.rutPagador
+                                                 AND a.idPeriodoInformado = mccico.idPeriodoInformado
+                                                 AND a.periodoCotizacion = mccico.periodoDevengRemuneracion )
+        WHERE dtip.codigo = ctiCodTipoProdCCICO -- CCICO
+        AND dtp.codigo = 'S';
+        
+        -- Del universo relación afiliado, se eliminan todos los movimientos por concepto de subsidios.
+        UPDATE  #movimientosCuentaCCICO
+        SET indSubsidio = CASE WHEN b.rutPersona is not null then 'S' ELSE 'N' END 
+        FROM #movimientosCuentaCCICO a 
+        LEFT OUTER JOIN #relacionAfiliadoSubsidios b ON (a.rutPersona = b.rutPersona
+                                                    AND a.rutPagador = b.rutPagador
+                                                    AND a.periodoDevengRemuneracion = b.periodoDevengRemuneracion); 
+message 'borrar Subsidio' to client;  
+                                                     
+        SELECT a.rutPersona,a.periodoDevengRemuneracion into #borrarSubsidio
+        FROM #movimientosCuentaCCICO a
+            INNER JOIN #movimientosCuentaCCICO b ON a.rutPersona = b.rutPersona and a.periodoDevengRemuneracion = b.periodoDevengRemuneracion AND b.indSubsidio = 'N'                                                 
+        WHERE a.indSubsidio = 'S';
+
+        --BORRA periodos donde existe subsidio y cotizacion normal
+        DELETE FROM #movimientosCuentaCCICO 
+        FROM #movimientosCuentaCCICO B
+        INNER JOIN #borrarSubsidio A ON a.rutPersona = b.rutPersona and a.periodoDevengRemuneracion = b.periodoDevengRemuneracion AND b.indSubsidio = 'S';
+message 'CAV' to client;
+
+        -- Movimientos Cuenta CAV
+        SELECT 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            dpe.rut                                 rutPersona,
+            dpa.rut                                 rutPagador,
+            a.idMaePlanilla                         planilla,
+            convert(bigint, null)                   codigoActividadEconomica,
+            'N'                                     indSubsidio,
+            SUM( a.montoPesos )                     montoPesos
+        INTO #movimientosCuentaCAV
+        FROM dchavez.FctMovimientosCuentaCodAct a
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.idPersona = dpe.id )
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.idPagador = dpa.id )
+            INNER JOIN DMGestion.DimTipoProducto b ON ( a.idTipoProducto = b.id ) 
+            INNER JOIN DMGestion.DimGrupoMovimiento c ON ( a.idGrupoMovimiento = c.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND a.idPagador > ctiCodEmplInvalido
+        AND a.periodoDevengRemuneracion IN ( ldtPeriodoCotizacion, ldtPeriodoCotizacionAdelantado ) 
+        AND b.codigo = ctiCodTipoProdCAV -- CAV
+        AND c.codigoSubgrupo = cbiCodSubGrupoCAV1
+        GROUP BY 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            a.idMaePlanilla;
+            
+        SELECT A.rutPersona,a.rutPagador,tca.COD_ACT_ECONOMICA into #codActCav
+        FROM #movimientosCuentaCAV a
+        INNER JOIN DDS.TB_PERSONA_PLANILLA ppl ON (ppl.ID_MAE_PLANILLA = a.Planilla and ind_tipo = 2)
+        INNER JOIN DDS.TB_COD_ACT_ECONOMICA tca ON (tca.ID_COD_ACT_ECONOMICA = ppl.ID_COD_ACT_ECONOMICA);
+        
+        --Agrega el código de actividad económico    
+        UPDATE #movimientosCuentaCAV
+        SET codigoActividadEconomica = isnull(b.COD_ACT_ECONOMICA,0)
+        FROM #movimientosCuentaCAV a
+        INNER JOIN #codActCav b on b.rutPersona = a.rutPersona AND a.rutpagador = b.rutPagador;                  
+
+         message 'APV' to client;           
+        -- Movimientos Cuenta APV
+        SELECT 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            dpe.rut                                 rutPersona,
+            dpa.rut                                 rutPagador,
+            a.idMaePlanilla                         planilla,
+            convert(bigint, null)                   codigoActividadEconomica,
+            'N'                                     indSubsidio,
+            SUM( a.montoPesos )                     montoPesos
+        INTO #movimientosCuentaAPV
+        FROM dchavez.FctMovimientosCuentaCodAct a
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.idPersona = dpe.id )
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.idPagador = dpa.id )
+            INNER JOIN DMGestion.DimTipoProducto b ON ( a.idTipoProducto = b.id ) 
+            INNER JOIN DMGestion.DimGrupoMovimiento c ON ( a.idGrupoMovimiento = c.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND a.idPagador > ctiCodEmplInvalido
+        AND a.periodoDevengRemuneracion IN ( ldtPeriodoCotizacion, ldtPeriodoCotizacionAdelantado ) 
+        AND b.codigo IN ( ctiCodTipoProdAPVCCICV, ctiCodTipoProdAPVCCIDC ) -- APV
+        AND c.codigoSubgrupo IN ( cbiCodSubGrupoAPV1, cbiCodSubGrupoAPV2 )
+        GROUP BY 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            a.idMaePlanilla;
+            
+        SELECT A.rutPersona,a.rutPagador,tca.COD_ACT_ECONOMICA into #codActapv
+        FROM #movimientosCuentaAPV a
+        INNER JOIN DDS.TB_PERSONA_PLANILLA ppl ON (ppl.ID_MAE_PLANILLA = a.Planilla and ind_tipo = 2)
+        INNER JOIN DDS.TB_COD_ACT_ECONOMICA tca ON (tca.ID_COD_ACT_ECONOMICA = ppl.ID_COD_ACT_ECONOMICA);
+        
+        --Agrega el código de actividad económico    
+        UPDATE #movimientosCuentaAPV
+        SET codigoActividadEconomica = isnull(b.COD_ACT_ECONOMICA,0)
+        FROM #movimientosCuentaAPV a
+        INNER JOIN #codActapv b on b.rutPersona = a.rutPersona AND a.rutpagador = b.rutPagador; 
+             
+message 'CAV y APV' to client;
+
+        -- Se obtiene el registro único por movimientos CAV y APV
+        SELECT
+            idPeriodoInformado,
+            periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            codigoActividadEconomica,
+            indSubsidio,
+            montoPesos 
+        INTO #otrosMovimientos
+        FROM ( SELECT
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    montoPesos 
+               FROM #movimientosCuentaCAV 
+               UNION
+               SELECT
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    montoPesos 
+               FROM #movimientosCuentaAPV 
+        ) c;
+message 'Se eliminan todos los afiliados que ya existan en los movimientos por cuentas CCICO.' to client;
+        -- Se eliminan todos los afiliados que ya existan en los movimientos por cuentas CCICO.
+        DELETE #otrosMovimientos
+        FROM #otrosMovimientos a, #movimientosCuentaCCICO b
+        WHERE a.rutPersona = b.rutPersona;
+
+        -- Se obtiene el univero de empleadores y afiliados por cuentas CCICO, CAV y APV
+        SELECT 
+            idPeriodoInformado,
+            periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            codigoActividadEconomica,
+            indSubsidio,
+            montoPesos 
+        INTO #relacionEmpAfiliado
+        FROM ( SELECT
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    montoPesos 
+               FROM #movimientosCuentaCCICO
+               UNION ALL
+               SELECT
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    montoPesos 
+               FROM #otrosMovimientos
+        ) a;
+        /*message 'independientes' to client;
+        -- Se identifican los afiliados independientes.
+        SELECT DISTINCT
+            rutPersona,
+            rutPagador
+        INTO #afiliadosIndependientes
+        FROM #relacionEmpAfiliado
+        WHERE rutPersona = rutPagador;
+
+        -- Del universo relación empleador afiliado, se eliminan todos los movimientos en los que se identifica
+        -- un afiliado independiente.
+        DELETE FROM #relacionEmpAfiliado
+        FROM #relacionEmpAfiliado a, #afiliadosIndependientes b
+        WHERE a.rutPersona = b.rutPersona
+        AND a.rutPagador = b.rutPagador;
+        */
+        -- A.1.a - Afiliados por cotizaciones en el mes.
+        -- Se obtiene la cantidad de Empleadores por Afiliado
+        SELECT
+            rutPersona,
+            COUNT( DISTINCT rutPagador )        numEmpleador
+        INTO #numEmpleador
+        FROM #relacionEmpAfiliado
+        GROUP BY 
+        rutPersona;
+
+        -- Se incluye la cantidad de Empleadores principales únicos por afiliado
+        SELECT 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            a.rutPersona,
+            a.rutPagador,
+            b.numEmpleador,
+            a.montoPesos,
+            codigoActividadEconomica,
+            indSubsidio,
+            CONVERT( TINYINT, ctiCodEmpPrincipal )               codigoEscalaCalidad,
+            CONVERT( TINYINT, ctiCodEstadoContractual1 )         codigoEstadoContractual
+        INTO #relacionEmpPrincipales 
+        FROM #relacionEmpAfiliado a
+            INNER JOIN #numEmpleador b ON ( a.rutPersona = b.rutPersona )
+        WHERE b.numEmpleador = ctiEmpUnicoAfiliado;
+
+        -- Se identifican los Empleadores morosos del periodo vigente
+        SELECT DISTINCT
+            a.idEmpleador,
+            dpa.rut                             rutPagadorMoroso,
+            a.numeroSerieDeuda
+        INTO #empleadoresMorosos
+        FROM DMGestion.FctDeudaCotizacionesPrevisionales a
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.idEmpleador = dpa.id )
+            INNER JOIN DMGestion.DimOrigenDeuda dod ON ( a.idOrigenDeuda = dod.id ) 
+            INNER JOIN DMGestion.DimSituacionDeuda dsd ON ( a.idSituacionDeuda = dsd.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND a.idEmpleador > ctiCodEmplInvalido -- idEmpleador válido
+        AND dod.codigo IN ( cchCodOrigenDeudaDNP, cchCodOrigenDeudaDNPA )
+        AND dsd.codigo = ctiCodDeudaIngresada; -- Deuda Ingresada
+
+        -- Identificados los Empleadores morosos del periodo vigente,
+        -- Se asocia el empleador y afiliado de acuerdo a la deuda
+        SELECT DISTINCT
+            a.idEmpleador,
+            a.idAfiliado,
+            b.rutPagadorMoroso,
+            dpe.rut                                                    rutPersona,            
+            CONVERT( TINYINT, ctiCodEstadoContractual2 )               codigoEstadoContractual 
+        INTO #empleadoresMorosos01 
+        FROM DMGestion.FctDetalleDeudaCotizacionesPrevisionales a
+            INNER JOIN #empleadoresMorosos b ON ( a.idEmpleador = b.idEmpleador 
+                                              AND a.numeroSerieDeuda = b.numeroSerieDeuda )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.idAfiliado = dpe.id )
+            INNER JOIN DMGestion.DimOrigenDeuda dod ON ( a.idOrigenDeuda = dod.id )
+            INNER JOIN DMGestion.DimSituacionDeuda dsd ON ( a.idSituacionDeuda = dsd.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND a.idEmpleador > ctiCodEmplInvalido -- idEmpleador válido
+        AND dod.codigo IN ( cchCodOrigenDeudaDNP, cchCodOrigenDeudaDNPA )
+        AND dsd.codigo = ctiCodDeudaIngresada; -- Deuda Ingresada
+
+        -- De acuerdo a los afiliados con un único empleador cotizante mes.
+        -- Se registra quién mantiene una deuda ( DNP o DNPA )
+        UPDATE #relacionEmpPrincipales a
+        SET a.codigoEstadoContractual = b.codigoEstadoContractual
+        FROM #relacionEmpPrincipales a, #empleadoresMorosos01 b
+        WHERE a.rutPagador = b.rutPagadorMoroso
+        AND a.rutPersona = b.rutPersona;
+
+        -------------------------------------------------------------------------------------------
+        -- Se identifica el universo de Afiliados con más de un empleador cotizante. 
+        -- De los cuales se obtendrá un único empleador principal y muchos empleadores secundarios
+        SELECT 
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            a.rutPersona,
+            a.rutPagador,
+            b.numEmpleador,
+            a.montoPesos,
+            codigoActividadEconomica,
+            indSubsidio,
+            CONVERT( TINYINT, ctiCodigoSinClasificar )       codigoEscalaCalidad,
+            CONVERT( TINYINT, ctiCodigoSinClasificar )       codigoEstadoContractual
+        INTO #relacionEmpPrincipales01
+        FROM #relacionEmpAfiliado a
+            INNER JOIN #numEmpleador b ON ( a.rutPersona = b.rutPersona )
+        WHERE b.numEmpleador > ctiEmpUnicoAfiliado;
+        
+message 'Universo de afiliados con más de un empleador' to client;
+        
+        -- Universo de afiliados con más de un empleador
+        SELECT DISTINCT
+            a.rutPersona,
+            a.rutPagador
+        INTO #empSecundarios
+        FROM #relacionEmpPrincipales01 a;
+
+        -------------------------------------------------------------------------------------------
+        -- A.1.b - Afiliados por cotizaciones en el mes
+        -- Se obtienen los tipos de movimientos de acuerdo a clasificación de grupos               
+        CALL DDS.cargarUniversoCodigoTrafil02(1);
+
+        -- Obtención de movimientos del grupo de cuentas CCICO.
+        SELECT DISTINCT
+            c.rutPersona,
+            c.rutPagador,
+            COUNT( DISTINCT a.per_cot )               numPerCot,
+            MAX( a.per_cot )                          maxPerCot,
+            MIN( a.per_cot )                          minPerCot, 
+            DATEDIFF( MONTH, minPerCot, maxPerCot )   numCot
+        INTO #universoEmpleadorSecCCICO
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #empSecundarios c ON ( dpe.rut = c.rutPersona 
+                                             AND a.rut_pagador = c.rutPagador )
+        WHERE fec_acreditacion <= ldtUltimaFechaMesInformar
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto = ctiCodTipoProdCCICO 
+        AND b.codigoSubgrupoMovimiento IN ( cbiCodSubGrupoCCICO1, cbiCodSubGrupoCCICO2 )
+        GROUP BY c.rutPersona,
+        c.rutPagador; 
+        
+ message 'Obtención de movimientos del grupo de cuentas CAV.' to client;
+        
+    -- Obtención de movimientos del grupo de cuentas CAV.
+        SELECT DISTINCT
+            c.rutPersona,
+            c.rutPagador,
+            COUNT( DISTINCT a.per_cot )               numPerCot,
+            MAX( a.per_cot )                          maxPerCot,
+            MIN( a.per_cot )                          minPerCot, 
+            DATEDIFF( MONTH, minPerCot, maxPerCot )   numCot
+        INTO #universoEmpleadorSecCAV
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #empSecundarios c ON ( dpe.rut = c.rutPersona 
+                                          AND a.rut_pagador = c.rutPagador )
+        WHERE fec_acreditacion <= ldtUltimaFechaMesInformar
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto = ctiCodTipoProdCAV 
+        AND b.codigoSubgrupoMovimiento = cbiCodSubGrupoCAV1
+        GROUP BY c.rutPersona,
+        c.rutPagador; 
+
+        -- Obtención de movimientos del grupo de cuentas APV.
+        SELECT DISTINCT
+            c.rutPersona,
+            c.rutPagador,
+            COUNT( DISTINCT a.per_cot )               numPerCot,
+            MAX( a.per_cot )                          maxPerCot,
+            MIN( a.per_cot )                          minPerCot, 
+            DATEDIFF( MONTH, minPerCot, maxPerCot )   numCot
+        INTO #universoEmpleadorSecAPV
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #empSecundarios c ON ( dpe.rut = c.rutPersona 
+                                          AND a.rut_pagador = c.rutPagador )
+        WHERE fec_acreditacion <= ldtUltimaFechaMesInformar
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto IN ( ctiCodTipoProdAPVCCICV, ctiCodTipoProdAPVCCIDC ) 
+        AND b.codigoSubgrupoMovimiento IN ( cbiCodSubGrupoAPV1, cbiCodSubGrupoAPV2 )
+        GROUP BY c.rutPersona,
+        c.rutPagador; 
+  message 'Unión de los afiliados con cotizaciones por cuentas CAV y APV ' to client;      
+        -- Unión de los afiliados con cotizaciones por cuentas CAV y APV
+        SELECT
+            rutPersona,
+            rutPagador,
+            numPerCot,
+            maxPerCot,
+            minPerCot,
+            numCot
+        INTO #universoEmpleadorSecOtros       
+        FROM ( SELECT  
+            rutPersona,
+            rutPagador,
+            numPerCot,
+            maxPerCot,
+            minPerCot,
+            numCot
+        FROM #universoEmpleadorSecCAV
+        UNION ALL
+        SELECT
+            rutPersona,
+            rutPagador,
+            numPerCot,
+            maxPerCot,
+            minPerCot,
+            numCot
+        FROM #universoEmpleadorSecAPV
+        ) a;
+
+        -- Se eliminan todos los afiliados, que ya existan en los movimientos por cuentas CCICO.
+        DELETE #universoEmpleadorSecOtros
+        FROM #universoEmpleadorSecOtros a, #universoEmpleadorSecCCICO b
+        WHERE a.rutPersona = b.rutPersona;
+        
+ message 'Se obtienen todos los afiliados con cotizaciones : ' to client;
+        
+ -- Se obtienen todos los afiliados con cotizaciones
+        SELECT
+            rutPersona,
+            rutPagador,
+            numPerCot,
+            maxPerCot,
+            minPerCot,
+            numCot
+        INTO #universoEmpleadorSec
+        FROM ( SELECT 
+                rutPersona,
+                rutPagador,
+                numPerCot,
+                maxPerCot,
+                minPerCot,
+                numCot
+        FROM #universoEmpleadorSecCCICO
+        UNION ALL
+        SELECT 
+                rutPersona,
+                rutPagador,
+                numPerCot,
+                maxPerCot,
+                minPerCot,
+                numCot
+        FROM #universoEmpleadorSecOtros
+        ) a;
+
+        -- Para identificar el único empleador principal y muchos empleadores secundarios por cada afiliado
+        -- Se identifica la mayor densidad de cotizaciones hechas por un empleador y su afiliado. 
+        //select * into yparedes.densidadEmpleadores from #universoEmpleadorSec; 
+        //commit;
+
+        /*SELECT 
+            rutPersona,
+            rutPagador,
+            numPerCot,
+            numCot                                                      numMesesCot, 
+            ( numPerCot / ( CONVERT( NUMERIC(6, 2), numMesesCot+1 ) ) ) densidadCot         
+            --( numPerCot / ( CONVERT( NUMERIC(5, 2), numMesesCot+1 ) ) ) densidadCot
+        INTO #densidadEmpleadores
+        FROM #universoEmpleadorSec; */
+     
+        -- Se identifican los Empleadores Principales y Secundarios
+        -- Se obtiene la mayor densidad de un empleador por afiliado
+       /* SELECT
+            a.rutPersona,
+            MAX( b.densidadCot )        densidadCot
+        INTO #maxDensidadCot 
+        FROM #relacionEmpPrincipales01 a
+            INNER JOIN #densidadEmpleadores b ON ( a.rutPersona = b.rutPersona 
+                                               AND a.rutPagador = b.rutPagador )
+        GROUP BY a.rutPersona;*/
+ --message 'Del Empleador con mayor densidad, se obtiene quién aporto mayor monto ' to client;
+        -- Del Empleador con mayor densidad, se obtiene quién aporto mayor monto
+        SELECT
+            a.rutPersona,
+            MAX( a.montoPesos )                   montoPesos
+        INTO #empPrincipal 
+        FROM #relacionEmpPrincipales01 a
+            --INNER JOIN #maxDensidadCot b ON ( a.rutPersona = b.rutPersona )
+            INNER JOIN #universoEmpleadorSec c ON ( a.rutPersona = c.rutPersona 
+                                               AND a.rutPagador = c.rutPagador ) 
+        --WHERE b.densidadCot = c.densidadCot
+        GROUP BY a.rutPersona;
+
+        -- Se obtienen los empleadores principales y secundarios por cada afiliado
+        SELECT DISTINCT
+            a.idPeriodoInformado,
+            a.periodoDevengRemuneracion,
+            a.rutPersona,
+            a.rutPagador,
+            a.numEmpleador,
+            a.montoPesos,
+            codigoActividadEconomica,
+            indSubsidio,
+            ( CASE 
+                    WHEN ( ( a.rutPersona = b.rutPersona ) AND ( a.montoPesos = b.montoPesos )  ) THEN
+                       ctiCodEmpPrincipal
+                    ELSE ctiCodEmpSecundario
+            END ) codigoEscalaCalidad,
+            ( CASE 
+                    WHEN ( ( a.rutPersona = b.rutPersona ) AND ( a.montoPesos = b.montoPesos ) ) THEN
+                        ctiCodEstadoContractual1
+                    ELSE ctiCodEstadoContractual1
+            END ) codigoEstadoContractual
+        INTO #relacionEmpPrincipales02
+        FROM #relacionEmpPrincipales01 a
+            LEFT OUTER JOIN #empPrincipal b ON ( a.rutPersona = b.rutPersona 
+                                             AND a.montoPesos = b.montoPesos );
+
+        -- Afiliados con más de un Empleador Principal, debido a que aportan el mismo monto pesos
+        SELECT COUNT( rutPersona ) n, 
+            rutPersona,
+            montoPesos
+        INTO #empPrincipal02  
+        FROM #relacionEmpPrincipales02
+        WHERE codigoEscalaCalidad = ctiCodEmpPrincipal 
+        GROUP BY rutPersona,
+        montoPesos 
+        HAVING n > 1 
+        ORDER BY n DESC;
+
+        -- Se identifica el Empleador Principal para cada afiliado, de acuerdo al máximo rutPagador. 
+        SELECT 
+            a.rutPersona,
+            MAX( a.rutPagador ) maxRutPagador,
+            a.montoPesos
+        INTO #empPrincipal03
+        FROM #relacionEmpPrincipales02 a 
+            INNER JOIN #empPrincipal02 b ON ( a.rutPersona = b.rutPersona 
+                                          AND b.montoPesos = b.montoPesos )
+        WHERE a.codigoEscalaCalidad = ctiCodEmpPrincipal
+        GROUP BY a.rutPersona,
+        a.montoPesos;
+
+        -- Los empleadores principales, que no se encuentren en el univero de #empPrincipal03, 
+        -- se establece su condición de secundario.
+        UPDATE #relacionEmpPrincipales02
+            SET a.codigoEscalaCalidad = ctiCodEmpSecundario -- Empleador Secundario
+        FROM #relacionEmpPrincipales02 a, #empPrincipal03 b 
+        WHERE a.codigoEscalaCalidad = ctiCodEmpPrincipal
+        AND a.rutPersona = b.rutPersona
+        AND a.montoPesos = b.montoPesos
+        AND a.rutPagador != b.maxRutPagador;
+
+        -- Se actualiza, que empleadores principales y secundarios, son morosos
+        UPDATE #relacionEmpPrincipales02 
+            SET a.codigoEstadoContractual = b.codigoEstadoContractual
+        FROM #relacionEmpPrincipales02 a, #empleadoresMorosos01 b 
+        WHERE a.rutPagador = b.rutPagadorMoroso
+        AND a.rutPersona = b.rutPersona;
+
+        message 'Afiliados por cotizaciones en el mes ' to client;
+        -- Afiliados por cotizaciones en el mes
+        SELECT 
+            idPeriodoInformado,
+            periodoDevengRemuneracion,
+            rutPersona,
+            rutPagador,
+            montoPesos,
+            codigoActividadEconomica,
+            indSubsidio,
+            codigoEscalaCalidad,
+            codigoEstadoContractual
+        INTO #afiliadoCotizanteMes
+        FROM ( SELECT 
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    montoPesos,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    codigoEscalaCalidad,
+                    codigoEstadoContractual
+               FROM #relacionEmpPrincipales
+               UNION
+               SELECT
+                    idPeriodoInformado,
+                    periodoDevengRemuneracion,
+                    rutPersona,
+                    rutPagador,
+                    montoPesos,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                    codigoEscalaCalidad,
+                    codigoEstadoContractual
+               FROM #relacionEmpPrincipales02
+        ) a;    
+ message 'Sección 2.1.2.   Afiliados sin cotizaciones en el mes ' to client;
+        -------------------------------------------------------------------------------------------          
+        -- Sección 2.1.2.   Afiliados sin cotizaciones en el mes
+        -- Clientes (CAV y APV)
+        SELECT 
+            b.rut   rutPersona
+        INTO #clientes
+        FROM DMGestion.FctlsInformacionAfiliadoCliente a 
+            INNER JOIN DMGestion.DimPersona b ON ( a.idPersona = b.id )
+            INNER JOIN DMGestion.DimClasificacionPersona c ON ( a.idSubClasificacionPersona = c.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND c.codigo = ctiCodCliente; -- Clientes         
+
+        -- Otros (CCICO - CAV y APV)
+        SELECT 
+            b.rut   rutPersona
+        INTO #otros    
+        FROM DMGestion.FctlsInformacionAfiliadoCliente a 
+            INNER JOIN DMGestion.DimPersona b ON ( a.idPersona = b.id )
+            INNER JOIN DMGestion.DimClasificacionPersona c ON ( a.idSubClasificacionPersona = c.id )
+        WHERE a.idPeriodoInformado = linIdPeriodoInformar
+        AND c.codigo != ctiCodCliente; -- Diferentes a Clientes
+
+        -- Se verifica que el tipo de afiliado de acuerdo a su clasificacion ( Cliente - Otros )
+        -- no figure en el univero de cotizantes mes.
+        -- Clientes
+        DELETE FROM #clientes    
+        FROM #clientes a, #afiliadoCotizanteMes b
+        WHERE a.rutPersona = b.rutPersona;
+
+        -- Otros
+        DELETE FROM #otros    
+        FROM #otros a, #afiliadoCotizanteMes b
+        WHERE a.rutPersona = b.rutPersona;
+
+        -- CLIENTES
+        -- a. Rango de 12 meses de acuerdo a periodo de devengo
+        -- Obtención de movimientos del grupo de cuentas CAV.
+        SELECT 
+            c.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #clientesCAV
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #clientes c ON ( dpe.rut = c.rutPersona )
+        WHERE fec_acreditacion >= DATEADD( MONTH, -12, ldtFechaPeriodoInformado )
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto = ctiCodTipoProdCAV  
+        AND b.codigoSubgrupoMovimiento = cbiCodSubGrupoCAV1;
+
+        -- Obtención de movimientos del grupo de cuentas APV.
+        SELECT DISTINCT
+            c.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #clientesAPV
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #clientes c ON ( dpe.rut = c.rutPersona )
+        WHERE fec_acreditacion >= DATEADD( MONTH, -12, ldtFechaPeriodoInformado )
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto IN ( ctiCodTipoProdAPVCCICV, ctiCodTipoProdAPVCCIDC ) 
+        AND b.codigoSubgrupoMovimiento IN ( cbiCodSubGrupoAPV1, cbiCodSubGrupoAPV2 );
+
+        -- Universo final de clientes
+        SELECT
+            a.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #clientes01
+        FROM ( SELECT
+                    rutPersona,
+                    rut_pagador,
+                    per_cot,
+                    monto_pesos
+               FROM #clientesCAV
+               UNION 
+               SELECT
+                    rutPersona,
+                    rut_pagador,
+                    per_cot,
+                    monto_pesos
+               FROM #clientesAPV
+        ) a;
+
+        -- OTROS
+        -- a. rango de 12 meses de acuerdo a periodo de devengo
+        -- Obtención de movimientos del grupo de cuentas CCICO.
+        SELECT DISTINCT
+            c.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #otrosCCICO
+        FROM dds.tb_mae_movimiento a
+            INNER JOIN dds.codigoTrafil02 b ON ( a.id_tip_producto = b.id_tip_producto 
+                                             AND a.id_tip_movimiento = b.id_tip_movimiento )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.id_mae_persona = dpe.idPersonaOrigen )
+            INNER JOIN #otros c ON ( dpe.rut = c.rutPersona )
+        WHERE fec_acreditacion >= DATEADD( MONTH, -12, ldtFechaPeriodoInformado )
+        AND rut_pagador > ctiCodEmplInvalido -- rut de empleador válido
+        AND b.codigoTipoProducto = ctiCodTipoProdCCICO 
+        AND b.codigoSubgrupoMovimiento IN ( cbiCodSubGrupoCCICO1, cbiCodSubGrupoCCICO2 ); 
+
+        -- Se obtiene el universo final entre clientes y no clientes
+        SELECT
+            a.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #afiliadosSinCotMes
+        FROM ( SELECT 
+                    rutPersona,
+                    rut_pagador,
+                    per_cot,
+                    monto_pesos
+               FROM #clientes01
+               UNION
+               SELECT 
+                    rutPersona,
+                    rut_pagador,
+                    per_cot,
+                    monto_pesos
+               FROM #otrosCCICO
+        ) a;
+
+        -- Se identifican los afiliados independientes.
+        SELECT DISTINCT
+            rutPersona,
+            rut_pagador
+        INTO #afiliadosIndependientesSinCotMes
+        FROM #afiliadosSinCotMes
+        WHERE rutPersona = rut_pagador;
+
+        -- Del universo relación afiliado, se eliminan todos los movimientos en los que se identifica
+        -- un afiliado independiente.
+        DELETE FROM #afiliadosSinCotMes
+        FROM #afiliadosSinCotMes a, #afiliadosIndependientesSinCotMes b
+        WHERE a.rutPersona = b.rutPersona
+        AND a.rut_pagador = b.rut_pagador;
+
+        -- PUNTO A
+        -- Se obtiene el máximo periodo de cotización de los afiliados sin cotización en el mes.
+        SELECT
+            rutPersona,
+            MAX( per_cot ) maxPerCot
+        INTO #maxPercot
+        FROM #afiliadosSinCotMes
+        GROUP BY rutPersona;
+
+        -- Se incorpora el máximo per_cot
+        SELECT
+            a.rutPersona,
+            a.rut_pagador,
+            a.per_cot,
+            a.monto_pesos
+        INTO #afiliadosSinCotMes01
+        FROM #afiliadosSinCotMes a
+            INNER JOIN #maxPerCot b ON ( a.rutPersona = b.rutPersona 
+                                     AND a.per_cot = b.maxPerCot );
+
+        -- Se obtiene el máximo monto en pesos aportado por empleadores por cada afiliado
+        SELECT 
+            rutPersona,
+            MAX( monto_pesos )   maxMontoPesos
+        INTO #maxMonto
+        FROM #afiliadosSinCotMes01
+        GROUP BY rutPersona;
+
+        -- Se incorpora el máximo monto en pesos y máximo rut pagador
+        SELECT 
+            a.rutPersona,
+            MAX( a.rut_pagador )                             rut_pagador,
+            a.per_cot,
+            a.monto_pesos,
+            CONVERT( TINYINT, ctiCodEmpHistorico )           codigoEscalaCalidad,
+            CONVERT( TINYINT, ctiCodEstadoContractual1 )     codigoEstadoContractual
+        INTO #empleadoresHistoricos
+        FROM #afiliadosSinCotMes01 a
+            INNER JOIN #maxMonto b ON ( a.rutPersona = b.rutPersona 
+                                    AND a.monto_pesos = b.maxMontoPesos )
+        GROUP BY a.rutPersona, 
+        a.per_cot,
+        a.monto_pesos;
+
+        -- PUNTO B
+        -- Se obtiene el rutPersona único entre el universo clientes y otros afiliados
+        SELECT
+            rutPersona
+        INTO #afiliados
+        FROM ( SELECT
+                    rutPersona
+               FROM #clientes
+               UNION
+               SELECT
+                    rutPersona
+               FROM #otros
+        ) a;
+
+        -- Se obtiene el estado contractual de cada empleador con sus respectivos afiliados
+        SELECT
+            a.rutPersona,
+            dpa.rut                 rutPagador,
+            b.numeroSerieDeuda,
+            b.saldoAdeudado
+        INTO #empHistoricoMoroso           
+        FROM #afiliados a
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.rutPersona = dpe.rut )
+            INNER JOIN DMGestion.FctDetalleDeudaCotizacionesPrevisionales b ON ( dpe.id = b.idAfiliado )
+            INNER JOIN DMGestion.DimPersona dpa ON ( b.idEmpleador = dpa.id )
+            INNER JOIN DMGestion.DimOrigenDeuda dod ON ( b.idOrigenDeuda = dod.id )
+            INNER JOIN DMGestion.DimSituacionDeuda dsd ON ( b.idSituacionDeuda = dsd.id )
+        WHERE b.idPeriodoInformado = linIdPeriodoInformar
+        AND dpe.fechaVigencia >= cdtMaximaFechaVigencia
+        AND dod.codigo IN ( cchCodOrigenDeudaDNP, cchCodOrigenDeudaDNPA )
+        AND dsd.codigo = ctiCodDeudaIngresada; -- Deuda Ingresada
+
+        -- Se obtienen los afiliados con sus respectivos empleadores morosos en un periodo de 12 meses,
+        -- a contar del periodo actual
+        SELECT 
+            a.rutPersona,
+            a.rutPagador,
+            b.periodoDevRemuneracion              per_cot,
+            SUM( a.saldoAdeudado )                saldoAdeudado
+        INTO #empHistoricoMoroso01
+        FROM #empHistoricoMoroso a
+            INNER JOIN DMGestion.DimPersona dpa ON ( a.rutPagador = dpa.rut )
+            INNER JOIN DMGestion.FctDeudaCotizacionesPrevisionales b ON ( dpa.id = b.idEmpleador 
+                                                                      AND a.numeroSerieDeuda = b.numeroSerieDeuda )
+            INNER JOIN DMGestion.DimOrigenDeuda dod ON ( b.idOrigenDeuda = dod.id )
+            INNER JOIN DMGestion.DimSituacionDeuda dsd ON ( b.idSituacionDeuda = dsd.id ) 
+        WHERE b.idPeriodoInformado = linIdPeriodoInformar
+        AND b.fechaDeclaracionOGenDeuda >= DATEADD( MONTH, -12, ldtFechaPeriodoInformado )
+        AND dpa.fechaVigencia >= cdtMaximaFechaVigencia
+        AND dod.codigo IN ( cchCodOrigenDeudaDNP, cchCodOrigenDeudaDNPA )
+        AND dsd.codigo = ctiCodDeudaIngresada
+        GROUP BY a.rutPersona,
+            a.rutPagador,
+            per_cot;  
+
+        -- Se obtiene el último per_cot
+        SELECT
+            rutPersona,
+            MAX( per_cot )      maxPerCot
+        INTO #maxPerCotEmpHistorico
+        FROM #empHistoricoMoroso01 
+        GROUP BY rutPersona;
+
+        -- Se obtiene el máximo saldo adeudao
+        SELECT 
+            a.rutPersona,
+            a.per_cot,
+            MAX( a.saldoAdeudado )        saldoAdeudado
+        INTO #empHistoricoMoroso02
+        FROM #empHistoricoMoroso01 a
+            INNER JOIN #maxPerCotEmpHistorico b ON ( a.rutPersona = b.rutPersona 
+                                                 AND a.per_cot = maxPerCot )
+        GROUP BY a.rutPersona,
+        a.per_cot;
+
+        -- Se incorpora el Empleador con el máximo saldo adeudado y si ocurre una igualdad de un afiliado con dos empleadores
+        -- se define el máximo rut_pagador
+        SELECT 
+            a.rutPersona,
+            MAX( a.rutPagador )       rutPagador,
+            a.per_cot,
+            a.saldoAdeudado,
+            CONVERT( TINYINT, ctiCodEmpHistorico )           codigoEscalaCalidad,
+            CONVERT( TINYINT, ctiCodEstadoContractual2 )     codigoEstadoContractual
+        INTO #empleadoresHistoricosMorosos
+        FROM #empHistoricoMoroso01 a
+            INNER JOIN #empHistoricoMoroso02 b ON ( a.rutPersona = b.rutPersona 
+                                                AND a.per_cot = b.per_cot 
+                                                AND a.saldoAdeudado = b.saldoAdeudado )
+        GROUP BY a.rutPersona,
+        a.per_cot,
+        a.saldoAdeudado;
+
+        -- Los empleadores históricos, que se encuentran en el universo de empleadores morosos
+        -- se identifica como moroso de acuerdo a cada afiliado
+        UPDATE #empleadoresHistoricos
+            SET a.codigoEstadoContractual = ctiCodEstadoContractual2
+        FROM #empleadoresHistoricos a, #empleadoresHistoricosMorosos b
+        WHERE a.rutPersona = b.rutPersona
+        AND a.rut_pagador = b.rutPagador;
+
+        -- Universo Final
+        SELECT
+            rutPagador,
+            rutPersona,
+            codigoActividadEconomica,
+            indSubsidio,
+            codigoEscalaCalidad,
+            codigoEstadoContractual
+        INTO #UniversoRegistroTMP01
+        FROM ( SELECT
+                   rutPagador,
+                   rutPersona,
+                    codigoActividadEconomica,
+                    indSubsidio,
+                   codigoEscalaCalidad,
+                   codigoEstadoContractual
+               FROM #afiliadoCotizanteMes
+               UNION
+               SELECT
+                   rut_pagador,
+                   rutPersona,
+                   null codigoActividadEconomica,
+                   null indSubsidio,
+                   codigoEscalaCalidad,
+                   codigoEstadoContractual
+               FROM #empleadoresHistoricos   
+        ) a;  
+  message 'Obtencion de los datos a Insertar en la FCT' to client;
+        -------------------------------------------------------------------------------------------     
+        --Obtencion de los datos a Insertar en la FCT      
+        ------------------------------------------------------------------------------------------- 
+        SELECT
+            linIdPeriodoInformar,
+            ISNULL( dpa.id, ctiCodigoSinClasificar )        idEmpleador,
+            dpe.id                                          idPersona,
+            deca.id                                         idEscalaCalidad,
+            deco.id                                         idEstadoContractual,
+            daco.id                                         idActividadEconomica,
+            indSubsidio,     
+            CONVERT( BIGINT, NULL )                         numeroFila,
+            CONVERT( BIGINT, NULL )                         idError
+        INTO #UniversoRegistroTMP
+        FROM #UniversoRegistroTMP01 a
+            LEFT OUTER JOIN DMGestion.DimPersona dpa ON ( a.rutPagador = dpa.rut 
+                                                    AND dpa.fechaVigencia >= cdtMaximaFechaVigencia )
+            INNER JOIN DMGestion.DimPersona dpe ON ( a.rutPersona = dpe.rut )            
+            INNER JOIN DMGestion.DimEscalaCalidad deca ON ( a.codigoEscalaCalidad = deca.codigo )
+            LEFT OUTER JOIN DMGestion.DimActividadEconomica daco ON (daco.codigo = a.codigoActividadEconomica AND daco.fechaVigencia >= cdtMaximaFechaVigencia ) 
+            INNER JOIN DMGestion.DimEstadoContractual deco ON ( a.codigoEstadoContractual = deco.codigo )
+        WHERE dpe.fechaVigencia >= cdtMaximaFechaVigencia
+        AND deca.fechaVigencia >= cdtMaximaFechaVigencia
+        AND deco.fechaVigencia >= cdtMaximaFechaVigencia;
+message 'Generación de Universo de Errores' to client;
+        -------------------------------------------------------------------------------------------     
+        --Generación de Universo de Errores      
+        -------------------------------------------------------------------------------------------
+        --Actualiza el numero de fila que corresponde
+        UPDATE #UniversoRegistroTMP a SET
+            numeroFila = ROWID(a);
+        /*
+        CREATE TABLE #UniversoErrores(
+            idError             BIGINT          NULL,
+            numeroFila          BIGINT          NOT NULL,
+            nombreColumna       VARCHAR(50)     NOT NULL,
+            tipoError           CHAR(1)         NOT NULL,
+            idCodigoError       BIGINT          NOT NULL,
+            descripcionError    VARCHAR(500)    NOT NULL
+        );
+
+        -------------------------------------------------------------------------------------------     
+        -- Obtencion de los errores a Insertar en en universo de errores    
+        -------------------------------------------------------------------------------------------
+        -- 'Empleador no registrado en tb_mae_persona, si en movimientos'
+        INSERT INTO #UniversoErrores(numeroFila, nombreColumna, tipoError, idCodigoError, descripcionError)
+        SELECT ur.numeroFila,
+            'idEmpleador' nombreColumna,
+            'I' tipoError,
+            ce.id idCodigoError,
+            'Empleador no registrado en tb_mae_persona, si en movimientos' descripcionError
+        FROM #UniversoRegistroTMP ur
+            INNER JOIN DMGestion.CodigoError ce ON ce.codigo = '1501'
+        WHERE ur.idEmpleador = ctiCodigoSinClasificar;
+
+        --Se registra la cabecera del error
+        INSERT INTO DMGestion.ErrorCarga(idPeriodoInformado, procesoCarga, fechaCarga, nombreTabla, numeroRegistro)
+        SELECT DISTINCT linIdPeriodoInformar, cstNombreProcedimiento, getDate(), cstNombreTablaFct, numeroFila
+        FROM #UniversoErrores;
+
+         --Se agrega el idError al universo de errores
+         UPDATE #UniversoErrores ue SET
+            ue.idError = ec.id
+         FROM DMGestion.ErrorCarga ec 
+         WHERE ue.numeroFila = ec.numeroRegistro
+            AND ec.procesoCarga = cstNombreProcedimiento
+            AND ec.nombreTabla = cstNombreTablaFct
+            AND ec.idPeriodoInformado = linIdPeriodoInformar;
+    
+         --Se registra el detalle del error
+         INSERT INTO DMGestion.DetalleErrorCarga(idError, nombreColumna, tipoError, idCodigoError, descripcion)
+         SELECT ue.idError, ue.nombreColumna, ue.tipoError, ue.idCodigoError, ue.descripcionError 
+         FROM #UniversoErrores ue;
+     
+         --Actualiza el idError en el universo a registrar
+         UPDATE #UniversoRegistroTMP ur SET
+            ur.idError = ue.idError
+         FROM #UniversoErrores ue
+         WHERE ue.numeroFila = ur.numeroFila;     
+        */
+        -------------------------------------------------------------------------------------------     
+        --Insertando en la Fact      
+        -------------------------------------------------------------------------------------------
+        INSERT INTO dchavez.FctEmpleadorRelacionAfiliado
+        (  idPeriodoInformado,
+           idEmpleador,
+           idPersona,
+           idEscalaCalidad,
+           idEstadoContractual,
+           idActividadEconomica,
+           indEmpleadorSubsidio,
+           idError 
+        )
+        SELECT
+           linIdPeriodoInformar,
+           idEmpleador,
+           idPersona,
+           idEscalaCalidad,
+           idEstadoContractual,
+           idActividadEconomica,
+           indSubsidio,
+           idError
+        FROM #UniversoRegistroTMP;
+
+        ------------------------------------------------
+        --Datos de Auditoria
+        ------------------------------------------------
+        --Se registra datos de auditoria
+        SELECT COUNT(*) 
+        INTO lbiCantidadRegistrosInformados
+        FROM #UniversoRegistroTMP;
+
+        
+        message 'total registros : '||lbiCantidadRegistrosInformados to client;
+
+        DROP TABLE #UniversoRegistroTMP;
+
+        --CALL DMGestion.registrarAuditoriaDatamarts(cstNombreProcedimiento, cstNombreTablaFct, ldtFechaInicioCarga, lbiCantidadRegistrosInformados, NULL);
+
+        COMMIT;
+        SAVEPOINT;
+        SET codigoError = cstCodigoErrorCero;
+    END IF;
+
+-------------------------------------------------------------------------------------------     
+--Manejo de Excepciones      
+-------------------------------------------------------------------------------------------
+
+/*EXCEPTION
+    WHEN OTHERS THEN
+        SET lstCodigoError = SQLSTATE;
+        SET codigoError = lstCodigoError;
+        ROLLBACK;
+        CALL DMGestion.registrarErrorProceso(cstNombreProcedimiento, lstCodigoError);*/
+END
